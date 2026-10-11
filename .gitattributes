@@ -1,0 +1,8 @@
+# Normalise line endings; keep Windows checkouts clean.
+* text=auto eol=lf
+*.png binary
+*.ttf binary
+
+# Third-party and generated assets: excluded from GitHub language stats and collapsed in diffs.
+vendor/** linguist-vendored -diff
+fonts/fonts.js linguist-generated -diff

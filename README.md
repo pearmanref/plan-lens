@@ -2,13 +2,17 @@
 
 Offline, browser-based generator for printable calendar pages: **month**, **week**, or **day** per page, exported as PDF.
 No install, no server, no network. Open `index.html` locally or host the folder as a static site.
+Optional fillable fields let you type into the PDF in Chrome, Edge or Adobe Acrobat.
+
+![Plan Lens week layout](docs/screenshot.png)
 
 ## Use
 
 1. Open `index.html` (double-click works; `file://` is supported).
 2. Pick a layout, set the date range, adjust paper / margins / options.
 3. Page through the live preview (◀ ▶ or arrow keys).
-4. **Download PDF**.
+4. Optionally tick **Fillable PDF fields**.
+5. **Download PDF**.
 
 Save frequent setups as **Presets** (kept in the browser's local storage). **Export JSON** backs up the current config and all presets. **Import JSON** restores them on another machine or browser.
 
@@ -20,7 +24,13 @@ Save frequent setups as **Presets** (kept in the browser's local storage). **Exp
 | Week | portrait | ISO week label (`2026-W42`), date span, highlighted mini month, one row per day with writing guides |
 | Day | portrait | Hourly schedule (configurable hours, optional second time zone), Top 3, task checkboxes, notes |
 
-**Fillable PDF fields** (optional) adds typeable text fields and checkboxes over every writing area: hour and half-hour slots, Top 3, tasks with checkboxes, notes and week rows (one single-line field per ruled line, so typed text sits on the rule), and month cells. Typed text uses JetBrains Mono. Target viewers are Chrome, Edge and Adobe Acrobat on Windows. Field names are built from the date (e.g. `2026-10-13_h0930`, `2026-10-13_task03_done`), so filled data can be exported later as structured records.
+### Fillable PDF fields
+
+Optional. Adds typeable text fields and checkboxes over every writing area: hour and half-hour slots, Top 3, tasks with checkboxes, notes and week rows (one single-line field per ruled line, so typed text sits on the rule), and month cells. Typed text uses JetBrains Mono. Target viewers are Chrome, Edge and Adobe Acrobat on Windows. Field names are built from the date (e.g. `2026-10-13_h0930`, `2026-10-13_task03_done`), so filled data can be exported later as structured records.
+
+Fillable PDFs are about 1 MB larger because the full font is embedded (any character you type needs a glyph). The app warns above 120 pages, since very large forms open slowly.
+
+### Page options
 
 Paper: US Letter, A4, Half Letter, A5. Week starts Monday or Sunday. Font: JetBrains Mono (embedded) or Courier.
 
@@ -37,6 +47,7 @@ js/forms.js         optional pass: pdf-lib adds form fields recorded during the 
 js/app.js           UI state, form binding, presets, preview paging, export
 vendor/             jsPDF 4.2.1, pdf-lib 1.17.1, @pdf-lib/fontkit 1.1.1 (all MIT), vendored for offline use
 fonts/              JetBrains Mono (OFL 1.1) as base64, so file:// works without fetch
+docs/               README assets
 ```
 
 Design rules:
