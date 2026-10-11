@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan Lens</title>
+<style>
+/* Layout: fixed config rail (left) + preview desk (right); rail stacks above desk under 860px. */
+:root {
+  --bg: #EEF1F4; --rail: #F8FAFB; --fg: #16191D; --muted: #66707C; --line: #D5DBE1;
+  --field: #FFFFFF; --accent: #2F6690; --accent-fg: #FFFFFF; --desk: #DDE2E7; --danger: #A23B3B;
+  --mono: "PL JetBrains Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171B; --rail: #1A1E23; --fg: #E3E7EB; --muted: #8C96A2; --line: #2C333B;
+    --field: #22272E; --accent: #6FA3CC; --accent-fg: #0E1114; --desk: #0F1215; --danger: #E07A7A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171B; --rail: #1A1E23; --fg: #E3E7EB; --muted: #8C96A2; --line: #2C333B;
+  --field: #22272E; --accent: #6FA3CC; --accent-fg: #0E1114; --desk: #0F1215; --danger: #E07A7A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 12.5px/1.45 var(--mono); }
+button, input, select { font: inherit; color: inherit; }
+.app { display: grid; grid-template-columns: 320px 1fr; height: 100%; }
+
+/* rail */
+.rail { background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.brand { padding: 14px 16px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-size: 15px; margin: 0; letter-spacing: .02em; }
+.brand .ver { color: var(--muted); font-size: 11px; }
+.brand .theme { margin-left: auto; }
+.scroll { overflow-y: auto; flex: 1; padding: 4px 16px 16px; }
+fieldset { border: 0; padding: 12px 0 4px; margin: 0; border-bottom: 1px dashed var(--line); display: grid; gap: 8px; }
+fieldset:last-child { border-bottom: 0; }
+legend { padding: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: var(--muted); margin-bottom: 4px; float: left; width: 100%; }
+.row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; }
+.row > label { color: var(--muted); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+input[type=text], input[type=number], input[type=date], input[type=month], select {
+  width: 100%; min-width: 0; background: var(--field); border: 1px solid var(--line); border-radius: 3px; padding: 5px 7px; height: 29px;
+}
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { accent-color: var(--accent); margin: 0; }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { text-align: center; padding: 6px 0; cursor: pointer; border-right: 1px solid var(--line); background: var(--field); }
+.seg label:last-of-type { border-right: 0; }
+.seg input:checked + label { background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip, .btn { border: 1px solid var(--line); background: var(--field); border-radius: 3px; padding: 4px 8px; cursor: pointer; }
+.chip:hover, .btn:hover { border-color: var(--accent); }
+.swatches { display: flex; gap: 6px; align-items: center; }
+.sw { width: 22px; height: 22px; border-radius: 3px; border: 2px solid transparent; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.sw[aria-pressed=true] { border-color: var(--fg); }
+input[type=color] { width: 30px; height: 24px; border: 1px solid var(--line); border-radius: 3px; padding: 0; background: var(--field); }
+
+.presets { display: grid; gap: 4px; }
+.preset { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
+.preset span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 2px 4px; }
+.link.danger { color: var(--danger); }
+.empty { color: var(--muted); font-size: 11.5px; }
+
+.out { border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
+.out .meta { color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.primary { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 3px; padding: 9px; font-weight: 700; cursor: pointer; letter-spacing: .04em; }
+.primary:disabled { opacity: .6; cursor: progress; }
+.warn { color: var(--danger); }
+
+/* desk */
+.desk { background: var(--desk); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--rail); }
+.bar .pg { font-variant-numeric: tabular-nums; min-width: 9ch; text-align: center; }
+.bar .info { color: var(--muted); margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage { flex: 1; display: grid; place-items: center; padding: 20px; min-height: 0; overflow: auto; }
+canvas { background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.15), 0 8px 24px rgba(0,0,0,.12); }
+
+[data-only] { display: none; }
+body[data-layout=month] [data-only~=month], body[data-layout=week] [data-only~=week], body[data-layout=day] [data-only~=day] { display: grid; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); }
+  .stage { min-height: 70vh; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body data-layout="day">
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <h1>Plan Lens</h1><span class="ver">v0.1</span>
+      <select id="theme" class="theme" aria-label="Theme" style="width:auto;height:24px;padding:0 4px">
+        <option value="">system</option><option value="light">light</option><option value="dark">dark</option>
+      </select>
+    </div>
+
+    <div class="scroll">
+      <fieldset>
+        <legend>LAYOUT</legend>
+        <div class="seg" role="radiogroup" aria-label="Page layout">
+          <input type="radio" name="layout" id="lay-month" value="month"><label for="lay-month">Month</label>
+          <input type="radio" name="layout" id="lay-week" value="week"><label for="lay-week">Week</label>
+          <input type="radio" name="layout" id="lay-day" value="day"><label for="lay-day">Day</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>RANGE</legend>
+        <div class="two" data-only="month">
+          <input type="month" id="monthFrom" aria-label="From month">
+          <input type="month" id="monthTo" aria-label="Through month">
+        </div>
+        <div class="two" data-only="week day">
+          <input type="date" id="dateFrom" aria-label="From date">
+          <input type="date" id="dateTo" aria-label="Through date">
+        </div>
+        <div class="chips" id="quick"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>PAGE</legend>
+        <div class="row"><label for="paper">Paper</label><select id="paper"></select></div>
+        <div class="row"><label for="orient">Orientation</label>
+          <select id="orient"><option value="auto">auto</option><option value="portrait">portrait</option><option value="landscape">landscape</option></select></div>
+        <div class="row"><label for="margin">Margin (in)</label><input type="number" id="margin" min="0" max="1.5" step="0.05"></div>
+        <div class="row"><label for="weekStart">Week starts</label>
+          <select id="weekStart"><option value="0">Monday</option><option value="6">Sunday</option></select></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>STYLE</legend>
+        <div class="row"><label for="font">Font</label>
+          <select id="font"><option value="jbm">JetBrains Mono</option><option value="courier">Courier</option></select></div>
+        <div class="row"><label>Accent</label>
+          <div class="swatches" id="swatches"><input type="color" id="accent" aria-label="Custom accent color"></div></div>
+        <label class="check"><input type="checkbox" id="shadeWeekends"> Shade weekends</label>
+      </fieldset>
+
+      <fieldset data-only="month">
+        <legend>MONTH OPTIONS</legend>
+        <label class="check"><input type="checkbox" id="m-weekNums"> ISO week numbers</label>
+        <label class="check"><input type="checkbox" id="m-minis"> Prev / next mini months</label>
+        <label class="check"><input type="checkbox" id="m-notes"> Notes strip</label>
+      </fieldset>
+
+      <fieldset data-only="week">
+        <legend>WEEK OPTIONS</legend>
+        <label class="check"><input type="checkbox" id="w-lines"> Writing guides</label>
+        <label class="check"><input type="checkbox" id="w-minis"> Mini month</label>
+        <label class="check"><input type="checkbox" id="w-dimOutside"> Dim days outside range</label>
+      </fieldset>
+
+      <fieldset data-only="day">
+        <legend>DAY OPTIONS</legend>
+        <div class="row"><label>Hours</label>
+          <div class="two"><select id="d-h0" aria-label="First hour"></select><select id="d-h1" aria-label="Last hour"></select></div></div>
+        <div class="row"><label for="d-tasks">Tasks</label><input type="number" id="d-tasks" min="0" max="30" step="1"></div>
+        <label class="check"><input type="checkbox" id="d-halfHours"> Half-hour guides</label>
+        <label class="check"><input type="checkbox" id="d-priorities"> Top 3 priorities</label>
+        <label class="check"><input type="checkbox" id="d-tz2"> Second time zone</label>
+        <div class="row" id="tzRowA"><label for="d-zoneA">Primary</label><input type="text" id="d-zoneA" list="zones" spellcheck="false"></div>
+        <div class="row" id="tzRowB"><label for="d-zoneB">Second</label><input type="text" id="d-zoneB" list="zones" spellcheck="false"></div>
+        <datalist id="zones"></datalist>
+      </fieldset>
+
+      <fieldset>
+        <legend>PRESETS</legend>
+        <div class="two" style="grid-template-columns:1fr auto">
+          <input type="text" id="presetName" placeholder="name, e.g. daily-letter" aria-label="Preset name">
+          <button class="btn" id="savePreset" type="button">Save</button>
+        </div>
+        <div class="presets" id="presetList"></div>
+        <div class="chips">
+          <button class="chip" id="exportCfg" type="button">Export JSON</button>
+          <label class="chip" for="importCfg" style="cursor:pointer">Import JSON</label>
+          <input type="file" id="importCfg" accept="application/json,.json" hidden>
+        </div>
+        <div class="empty" id="presetMsg" aria-live="polite"></div>
+      </fieldset>
+    </div>
+
+    <div class="out">
+      <div class="meta"><span id="pageCount">—</span><span id="paperInfo"></span></div>
+      <div class="row" style="grid-template-columns:auto 1fr"><label for="fileName">File</label><input type="text" id="fileName" spellcheck="false"></div>
+      <button class="primary" id="download" type="button">Download PDF</button>
+      <div class="empty" id="status" aria-live="polite"></div>
+    </div>
+  </aside>
+
+  <main class="desk">
+    <div class="bar">
+      <button class="btn" id="prev" type="button" aria-label="Previous page">‹</button>
+      <span class="pg" id="pgLabel">1 / 1</span>
+      <button class="btn" id="next" type="button" aria-label="Next page">›</button>
+      <span class="info" id="pgInfo"></span>
+    </div>
+    <div class="stage" id="stage"><canvas id="canvas" aria-label="Page preview"></canvas></div>
+  </main>
+</div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="fonts/fonts.js"></script>
+<script src="js/dates.js"></script>
+<script src="js/surfaces.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
