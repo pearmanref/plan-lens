@@ -6,6 +6,10 @@ Optional fillable fields let you type into the PDF in Chrome, Edge or Adobe Acro
 
 ![Plan Lens week layout](docs/screenshot.png)
 
+## Live version
+
+**[pearmanref.github.io/plan-lens](https://pearmanref.github.io/plan-lens/)** runs entirely in your browser. Nothing is uploaded; PDFs are generated locally. To use it offline, clone or download the repo and open `index.html`.
+
 ## Use
 
 1. Open `index.html` (double-click works; `file://` is supported).
@@ -56,14 +60,6 @@ Design rules:
 - **Classic scripts, not ES modules.** Browsers block module imports over `file://`. Each file attaches to the `window.PL` namespace instead.
 - **Fields are recorded, not drawn.** Renderers call `s.field(...)` for every writable area. The preview outlines them, the PDF surface records them, and `forms.js` adds them in a second pass with pdf-lib, because jsPDF's own form support is incomplete. With Fillable off, that pass never runs.
 - **Config is the single source of truth.** Form changes write to `cfg`, and everything else is recomputed from it. That is also what presets and JSON export serialize.
-
-## Hosting
-
-Static files with relative paths, so any static host works.
-
-**GitHub Pages:** push to GitHub → *Settings → Pages → Deploy from a branch → `main` / root*. `.nojekyll` is included so files are served as-is.
-
-**GitLab Pages:** push to GitLab. The included `.gitlab-ci.yml` copies the app into `public/` and deploys it on the default branch.
 
 ## License
 
