@@ -133,6 +133,8 @@
         s.text(x + 5, top + nfs * 1.25, T.pad(T.D(d)), { bold: inside, size: nfs, color: inside ? C.ink : C.faint });
         if (T.D(d) === 1 && !inside)
           s.text(x + 5 + nfs * 1.5, top + nfs * 1.2, T.MONTHS[T.M(d) - 1].slice(0, 3).toUpperCase(), { size: nfs * 0.6, color: C.faint });
+        s.field({ name: `${ym}_${T.iso(d)}`, x: x + 3, y: top + nfs * 1.6, w: cw - 6, h: rh - nfs * 1.6 - 3,
+          multiline: true, size: Math.max(6, Math.min(8, rh * 0.09)) });
       });
     });
     for (let r = 1; r < weeks.length; r++) s.line(pg.x + gutter, G + rh * r, pg.x + pg.w, G + rh * r, { color: C.faint });
@@ -143,10 +145,12 @@
     if (o.notes) {
       const nT = gB + pg.h * 0.012, nH = pg.y + pg.h - nT;
       s.text(pg.x, nT + labelH * 0.5, "NOTES", { bold: true, size: labelH * 0.42, color: C.muted });
+      const nx = pg.x + Math.max(gutter, s.tw("NOTES ", labelH * 0.42));
       [1, 2].forEach((k) => {
         const yy = nT + nH * k / 2.4 + labelH * 0.3;
-        s.line(pg.x + Math.max(gutter, s.tw("NOTES ", labelH * 0.42)), yy, pg.x + pg.w, yy, { color: C.faint });
+        s.line(nx, yy, pg.x + pg.w, yy, { color: C.faint });
       });
+      s.field({ name: `${ym}_notes`, x: nx, y: nT + 2, w: pg.x + pg.w - nx, h: nH - 2, multiline: true, size: 8 });
     }
   }
 
@@ -182,6 +186,8 @@
         const n = Math.max(3, Math.floor(rh / 20)), step = rh / n;
         for (let k = 1; k < n; k++) s.line(pg.x + lw + 8, top + step * k, pg.x + pg.w, top + step * k, { color: C.faint, dash: [1, 2] });
       }
+      s.field({ name: `${T.iso(d)}_week`, x: pg.x + lw + 8, y: top + 3, w: pg.w - lw - 8, h: rh - 6,
+        multiline: true, size: Math.max(7, Math.min(9.5, pg.h * 0.0115)) });
       s.line(pg.x, top + rh, pg.x + pg.w, top + rh, { color: i === 6 ? C.ink : C.faint, width: i === 6 ? 0.8 : 0.5 });
     });
   }
@@ -225,6 +231,17 @@
       s.text(pg.x + leftW, bT + lf * 1.5, `${tz.a} → ${tz.b}`, { size: lf * 0.85, color: C.muted, align: "right" });
     }
     const n = o.h1 - o.h0 + 1, rh = (bB - secT) / n;
+    const id = T.iso(d), ffs = Math.max(7, Math.min(10, lf * 1.05));   // field font size
+    const fx = pg.x + colW + col2W, fw2 = leftW - colW - col2W;
+    for (let i = 0; i < n; i++) {
+      const top = secT + rh * i, hh = T.pad((o.h0 + i) % 24);
+      if (o.halfHours) {
+        s.field({ name: `${id}_h${hh}00`, x: fx, y: top + 1, w: fw2, h: rh / 2 - 2, size: ffs });
+        s.field({ name: `${id}_h${hh}30`, x: fx, y: top + rh / 2 + 1, w: fw2, h: rh / 2 - 2, size: ffs });
+      } else {
+        s.field({ name: `${id}_h${hh}00`, x: fx, y: top + 1, w: fw2, h: rh - 2, size: ffs });
+      }
+    }
     for (let i = 0; i < n; i++) {
       const top = secT + rh * i, h = o.h0 + i;
       s.text(pg.x, top + lf * 1.25, T.pad(h % 24) + "00", { size: hfs, color: C.ink });
@@ -252,6 +269,7 @@
         const t = top + ph * k;
         s.text(rx, t + ph * 0.62, String(k + 1), { bold: true, size: lf * 1.3, color: C.accent });
         s.line(rx + lf * 1.6, t + ph, rx + rw, t + ph, { color: C.faint });
+        s.field({ name: `${id}_top${k + 1}`, x: rx + lf * 1.6, y: t + ph * 0.3, w: rw - lf * 1.6, h: ph * 0.7 - 1, size: ffs });
       }
       yc += lf * 1.6;
     }
@@ -263,11 +281,15 @@
         const t = top + th * k;
         s.rect(rx, t + th / 2 - bs / 2, bs, bs, { stroke: C.muted, width: 0.6 });
         s.line(rx + bs + 6, t + th, rx + rw, t + th, { color: C.faint });
+        const nn = T.pad(k + 1);
+        s.field({ name: `${id}_task${nn}_done`, type: "check", x: rx, y: t + th / 2 - bs / 2, w: bs, h: bs });
+        s.field({ name: `${id}_task${nn}`, x: rx + bs + 6, y: t + 1, w: rw - bs - 6, h: th - 2, size: ffs });
       }
       yc += lf * 1.6;
     }
     const top = section("NOTES", 0);
     for (let yy = top + 20; yy < bB - 2; yy += 20) s.line(rx, yy, rx + rw, yy, { color: C.faint, dash: [1, 2] });
+    s.field({ name: `${id}_notes`, x: rx, y: top + 2, w: rw, h: bB - top - 4, multiline: true, size: ffs });
     s.line(rx, bB, rx + rw, bB, { color: C.ink, width: 0.8 });
   }
 

@@ -30,6 +30,7 @@
       week: { lines: true, minis: true, dimOutside: false },
       day: { h0: 6, h1: 22, tasks: 12, halfHours: true, priorities: true,
              tz2: false, zoneA: localZone, zoneB: "Australia/Sydney" },
+      fillable: false,
       fileName: "",
     };
   }
@@ -54,6 +55,7 @@
     ["d-h0", "day.h0", "num"], ["d-h1", "day.h1", "num"], ["d-tasks", "day.tasks", "num"],
     ["d-halfHours", "day.halfHours", "bool"], ["d-priorities", "day.priorities", "bool"],
     ["d-tz2", "day.tz2", "bool"], ["d-zoneA", "day.zoneA"], ["d-zoneB", "day.zoneB"],
+    ["fillable", "fillable", "bool"],
   ];
   const getPath = (o, p) => p.split(".").reduce((a, k) => a[k], o);
   const setPath = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((a, k) => a[k], o)[last] = v; };
@@ -122,6 +124,7 @@
     const size = R.pageSize(cfg);
     $("paperInfo").textContent = `${(size.w / 72).toFixed(2)}×${(size.h / 72).toFixed(2)} in`;
     $("fileName").placeholder = R.fileName(cfg);
+    if (cfg.fillable && n > 120) $("status").innerHTML = `<span class="warn">${n} fillable pages: large forms open slowly in viewers.</span>`;
     renderQuick();
     store.set(KEY_CFG, cfg);
     drawPreview();
@@ -183,30 +186,47 @@
       $("pgInfo").textContent = job.kind === "month" ? `${T.MONTHS[job.m - 1]} ${job.y}`
         : job.kind === "week" ? `${T.weekLabel(job.days[3])} · ${T.iso(job.days[0])} → ${T.iso(job.days[6])}`
         : `${T.WD_LONG[T.dow(job.d)]} ${T.iso(job.d)}`;
-      try { R.renderJob(new S.CanvasSurface(ctx, fit * dpr, cfg.font), job, cfg, size); }
+      try { R.renderJob(new S.CanvasSurface(ctx, fit * dpr, cfg.font, cfg.fillable), job, cfg, size); }
       catch (err) { console.error(err); $("pgInfo").textContent = "Preview error: " + err.message; }
     });
   }
 
   // ── PDF export ────────────────────────────────────────────────────────
+  function downloadBytes(bytes, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
   function exportPdf() {
     if (!jobs.length) return;
     const btn = $("download");
     btn.disabled = true; btn.textContent = `Building ${jobs.length} pages…`; $("status").textContent = "";
-    setTimeout(() => {   // let the button repaint before the synchronous build
+    setTimeout(async () => {   // let the button repaint before the synchronous build
       try {
         const size = R.pageSize(cfg), orient = size.w > size.h ? "landscape" : "portrait";
         const doc = new window.jspdf.jsPDF({ unit: "pt", format: [size.w, size.h], orientation: orient, compress: true });
         const surf = new S.PdfSurface(doc, cfg.font);
         jobs.forEach((job, i) => {
           if (i > 0) doc.addPage([size.w, size.h], orient);
+          surf.page = i;
           R.renderJob(surf, job, cfg, size);
         });
         let name = (cfg.fileName || R.fileName(cfg)).trim();
         if (!/\.pdf$/i.test(name)) name += ".pdf";
         doc.setProperties({ title: name.replace(/\.pdf$/i, ""), creator: "Plan Lens" });
-        doc.save(name);
-        $("status").textContent = `Saved ${name} · ${jobs.length} page${jobs.length === 1 ? "" : "s"}`;
+        let note = "";
+        if (cfg.fillable) {
+          btn.textContent = `Adding ${surf.fields.length} fields…`;
+          const out = await PL.forms.addFields(doc.output("arraybuffer"), surf.fields, cfg);
+          downloadBytes(out.bytes, name);
+          note = ` · ${out.count} fields`;
+        } else {
+          doc.save(name);
+        }
+        $("status").textContent = `Saved ${name} · ${jobs.length} page${jobs.length === 1 ? "" : "s"}${note}`;
       } catch (err) {
         console.error(err);
         $("status").innerHTML = `<span class="warn">Export failed: ${err.message}</span>`;
@@ -288,6 +308,7 @@
   });
   // re-sync fields that normalise() may have adjusted once the user leaves them
   document.querySelector(".scroll").addEventListener("change", () => writeForm());
+  $("fillable").addEventListener("change", (e) => { cfg.fillable = e.target.checked; changed(); });
   $("fileName").addEventListener("input", (e) => { cfg.fileName = e.target.value; store.set(KEY_CFG, cfg); });
   $("prev").addEventListener("click", () => { pageIdx = Math.max(0, pageIdx - 1); drawPreview(); });
   $("next").addEventListener("click", () => { pageIdx = Math.min(jobs.length - 1, pageIdx + 1); drawPreview(); });

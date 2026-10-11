@@ -5,6 +5,7 @@
 //   s.line(x1, y1, x2, y2, {color, width, dash})
 //   s.rect(x, y, w, h, {fill, stroke, width})
 //   s.tw(str, size)                                  // text width
+//   s.field({name, x, y, w, h, type, multiline, size}) // fillable region (text | check)
 // Units are PDF points (1/72 in), origin top-left, y grows downward.
 // Because both backends implement the same calls, the preview IS the PDF layout.
 (function () {
@@ -35,8 +36,19 @@
   }
 
   class CanvasSurface {
-    constructor(ctx, scale, fontKey) {
-      this.ctx = ctx; this.k = scale; this.font = FONTS[fontKey] || FONTS.jbm;
+    constructor(ctx, scale, fontKey, showFields) {
+      this.ctx = ctx; this.k = scale; this.font = FONTS[fontKey] || FONTS.jbm; this.showFields = !!showFields;
+    }
+    // Preview only: outline where fillable fields will land.
+    field(f) {
+      if (!this.showFields) return;
+      const c = this.ctx, k = this.k;
+      c.save();
+      c.fillStyle = "rgba(47,102,144,0.06)";
+      c.fillRect(f.x * k, f.y * k, f.w * k, f.h * k);
+      c.strokeStyle = "rgba(47,102,144,0.45)"; c.lineWidth = 1; c.setLineDash([3, 2]);
+      c.strokeRect(f.x * k + 0.5, f.y * k + 0.5, f.w * k - 1, f.h * k - 1);
+      c.restore();
     }
     tw(str, size) { return String(str).length * MONO_ADVANCE * size; }
     text(x, y, str, o = {}) {
@@ -68,6 +80,7 @@
   class PdfSurface {
     constructor(doc, fontKey) {
       this.doc = doc; this.font = FONTS[fontKey] || FONTS.jbm;
+      this.page = 0; this.fields = [];   // fields are recorded here, added later by forms.js
       if (this.font.pdf === "JBM") {
         const F = window.PL_FONTS;
         doc.addFileToVFS("JBM-Regular.ttf", F.regular);
@@ -77,6 +90,7 @@
       }
     }
     tw(str, size) { return String(str).length * MONO_ADVANCE * size; }
+    field(f) { this.fields.push({ ...f, page: this.page }); }
     text(x, y, str, o = {}) {
       const d = this.doc;
       d.setFont(this.font.pdf, o.bold ? "bold" : "normal");
