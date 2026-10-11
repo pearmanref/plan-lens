@@ -20,7 +20,7 @@ Save frequent setups as **Presets** (kept in the browser's local storage). **Exp
 | Week | portrait | ISO week label (`2026-W42`), date span, highlighted mini month, one row per day with writing guides |
 | Day | portrait | Hourly schedule (configurable hours, optional second time zone), Top 3, task checkboxes, notes |
 
-**Fillable PDF fields** (optional) adds typeable text fields and checkboxes over every writing area: hour and half-hour slots, Top 3, tasks with checkboxes, notes, week rows and month cells. Typed text uses JetBrains Mono. Target viewers are Chrome, Edge and Adobe Acrobat on Windows. Field names are built from the date (e.g. `2026-10-13_h0930`, `2026-10-13_task03_done`), so filled data can be exported later as structured records.
+**Fillable PDF fields** (optional) adds typeable text fields and checkboxes over every writing area: hour and half-hour slots, Top 3, tasks with checkboxes, notes and week rows (one single-line field per ruled line, so typed text sits on the rule), and month cells. Typed text uses JetBrains Mono. Target viewers are Chrome, Edge and Adobe Acrobat on Windows. Field names are built from the date (e.g. `2026-10-13_h0930`, `2026-10-13_task03_done`), so filled data can be exported later as structured records.
 
 Paper: US Letter, A4, Half Letter, A5. Week starts Monday or Sunday. Font: JetBrains Mono (embedded) or Courier.
 

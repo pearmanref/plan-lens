@@ -85,6 +85,16 @@
   }
   const isWeekend = (d) => T.dow(d) >= 5;
 
+  // One single-line field sitting on each ruled line, so typed text rests on the rule
+  // instead of following the viewer's own multi-line spacing.
+  function lineFields(s, base, x, w, lineYs, size) {
+    const gaps = lineYs.map((y, i) => (i ? y - lineYs[i - 1] : Infinity));
+    lineYs.forEach((y, i) => {
+      const h = Math.min(size * 1.9, (i ? gaps[i] : gaps[1] || size * 2) - 2);
+      s.field({ name: `${base}_L${T.pad(i + 1)}`, x, y: y - h - 0.5, w, h, size });
+    });
+  }
+
   // ── month ─────────────────────────────────────────────────────────────
   function renderMonth(s, C, pg, cfg, y, m) {
     const fw = +cfg.weekStart, o = cfg.month;
@@ -146,11 +156,9 @@
       const nT = gB + pg.h * 0.012, nH = pg.y + pg.h - nT;
       s.text(pg.x, nT + labelH * 0.5, "NOTES", { bold: true, size: labelH * 0.42, color: C.muted });
       const nx = pg.x + Math.max(gutter, s.tw("NOTES ", labelH * 0.42));
-      [1, 2].forEach((k) => {
-        const yy = nT + nH * k / 2.4 + labelH * 0.3;
-        s.line(nx, yy, pg.x + pg.w, yy, { color: C.faint });
-      });
-      s.field({ name: `${ym}_notes`, x: nx, y: nT + 2, w: pg.x + pg.w - nx, h: nH - 2, multiline: true, size: 8 });
+      const ys = [1, 2].map((k) => nT + nH * k / 2.4 + labelH * 0.3);
+      ys.forEach((yy) => s.line(nx, yy, pg.x + pg.w, yy, { color: C.faint }));
+      lineFields(s, `${ym}_notes`, nx, pg.x + pg.w - nx, ys, 8);
     }
   }
 
@@ -182,12 +190,16 @@
       s.text(pg.x + 4, top + fs * 1.9, T.WD[T.dow(d)], { bold: true, size: fs * 0.42, color: inside ? C.accent : C.faint });
       s.text(pg.x + 4, top + fs * 2.4, T.iso(d), { size: fs * 0.32, color: inside ? C.muted : C.faint });
       s.line(pg.x + lw, top + 6, pg.x + lw, top + rh - 6, { color: C.faint });
+      const wfs = Math.max(7, Math.min(9.5, pg.h * 0.0115));
       if (o.lines) {
         const n = Math.max(3, Math.floor(rh / 20)), step = rh / n;
         for (let k = 1; k < n; k++) s.line(pg.x + lw + 8, top + step * k, pg.x + pg.w, top + step * k, { color: C.faint, dash: [1, 2] });
+        // rule k = 1..n; the last one is the row's bottom border
+        const ys = Array.from({ length: n }, (_, k) => top + step * (k + 1));
+        lineFields(s, `${T.iso(d)}_week`, pg.x + lw + 8, pg.w - lw - 8, ys, wfs);
+      } else {
+        s.field({ name: `${T.iso(d)}_week`, x: pg.x + lw + 8, y: top + 3, w: pg.w - lw - 8, h: rh - 6, multiline: true, size: wfs });
       }
-      s.field({ name: `${T.iso(d)}_week`, x: pg.x + lw + 8, y: top + 3, w: pg.w - lw - 8, h: rh - 6,
-        multiline: true, size: Math.max(7, Math.min(9.5, pg.h * 0.0115)) });
       s.line(pg.x, top + rh, pg.x + pg.w, top + rh, { color: i === 6 ? C.ink : C.faint, width: i === 6 ? 0.8 : 0.5 });
     });
   }
@@ -288,8 +300,9 @@
       yc += lf * 1.6;
     }
     const top = section("NOTES", 0);
-    for (let yy = top + 20; yy < bB - 2; yy += 20) s.line(rx, yy, rx + rw, yy, { color: C.faint, dash: [1, 2] });
-    s.field({ name: `${id}_notes`, x: rx, y: top + 2, w: rw, h: bB - top - 4, multiline: true, size: ffs });
+    const ys = [];
+    for (let yy = top + 20; yy < bB - 2; yy += 20) { s.line(rx, yy, rx + rw, yy, { color: C.faint, dash: [1, 2] }); ys.push(yy); }
+    lineFields(s, `${id}_notes`, rx, rw, ys, ffs);
     s.line(rx, bB, rx + rw, bB, { color: C.ink, width: 0.8 });
   }
 
